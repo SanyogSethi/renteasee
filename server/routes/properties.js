@@ -192,6 +192,24 @@ router.get('/:id', async (req, res) => {
 // Create property (Owner only)
 router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => {
   try {
+    console.log('\n=== Creating New Property ===');
+    console.log('Request files:', req.files ? req.files.length : 0);
+    if (req.files && req.files.length > 0) {
+      req.files.forEach((file, idx) => {
+        console.log(`File ${idx + 1}:`, {
+          fieldname: file.fieldname,
+          originalname: file.originalname,
+          path: file.path,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+      });
+    } else {
+      console.log('⚠️  No files received in req.files');
+      console.log('Request body keys:', Object.keys(req.body));
+      console.log('Content-Type:', req.headers['content-type']);
+    }
+
     const { title, description, address, price, capacity, amenities, rules, latitude, longitude,
             foodAvailability, wifi, ac, laundry, housekeeping, attachedBathroom, parking } = req.body;
 
@@ -206,7 +224,17 @@ router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => 
       addressObj = address;
     }
 
-    const images = req.files ? req.files.map(file => file.path) : [];
+    const images = req.files ? req.files.map(file => {
+      console.log('Processing image:', file.path);
+      // Verify file exists
+      if (fs.existsSync(file.path)) {
+        console.log('✅ File exists:', file.path);
+      } else {
+        console.error('❌ File does NOT exist:', file.path);
+      }
+      return file.path;
+    }) : [];
+    console.log('Total images to save:', images.length);
 
     // Build amenitiesDetails object
     const amenitiesDetails = {
@@ -302,6 +330,24 @@ router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => 
 // Update property (Owner only)
 router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) => {
   try {
+    console.log('\n=== Updating Property ===');
+    console.log('Request files:', req.files ? req.files.length : 0);
+    if (req.files && req.files.length > 0) {
+      req.files.forEach((file, idx) => {
+        console.log(`File ${idx + 1}:`, {
+          fieldname: file.fieldname,
+          originalname: file.originalname,
+          path: file.path,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+      });
+    } else {
+      console.log('⚠️  No files received in req.files');
+      console.log('Request body keys:', Object.keys(req.body));
+      console.log('Content-Type:', req.headers['content-type']);
+    }
+
     const property = await Property.findById(req.params.id);
     
     if (!property) {

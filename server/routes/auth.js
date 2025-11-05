@@ -57,6 +57,17 @@ const generateToken = (userId) => {
 // Register with document verification
 router.post('/register', upload.single('document'), async (req, res) => {
   try {
+    console.log('\n=== User Registration ===');
+    console.log('Request file:', req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      path: req.file.path,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    } : 'NO FILE RECEIVED');
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Content-Type:', req.headers['content-type']);
+
     const { name, email, password, phone, role, documentType } = req.body;
 
     // Validate required fields
@@ -78,7 +89,15 @@ router.post('/register', upload.single('document'), async (req, res) => {
     let isVerified = false;
     let detectedDocumentType = null;
     if (req.file) {
+      console.log('✅ File received, verifying...');
       const documentPath = req.file.path;
+      
+      // Verify file exists
+      if (fs.existsSync(documentPath)) {
+        console.log('✅ Document file exists:', documentPath);
+      } else {
+        console.error('❌ Document file does NOT exist:', documentPath);
+      }
       const { documentNumber } = req.body; // Get document number from user input
       
       // Pass user's name (for identification) and document number to verification service
