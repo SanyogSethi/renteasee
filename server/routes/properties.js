@@ -232,9 +232,14 @@ router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => 
       } else {
         console.error('❌ File does NOT exist:', file.path);
       }
-      return file.path;
+      // Convert absolute path to relative path for database storage
+      // Remove the project root path, keep only uploads/... part
+      const relativePath = file.path.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
+      console.log('✅ Saving relative path:', relativePath);
+      return relativePath;
     }) : [];
     console.log('Total images to save:', images.length);
+    console.log('Image paths:', images);
 
     // Build amenitiesDetails object
     const amenitiesDetails = {
@@ -575,12 +580,17 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
           console.error(`⚠️  Warning: Uploaded file not found at: ${filePath}`);
           // Still return the path - it might be accessible via static serving
         }
-        return filePath;
+        // Convert absolute path to relative path for database storage
+        // Remove the project root path, keep only uploads/... part
+        const relativePath = filePath.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
+        console.log(`✅ Converting path: ${filePath} -> ${relativePath}`);
+        return relativePath;
       });
       
       property.images = [...(property.images || []), ...newImagePaths];
       hasSignificantChanges = true;
       console.log(`✓ Added ${newImagePaths.length} new image(s)`);
+      console.log(`✓ Image paths saved:`, newImagePaths);
     }
 
     // ALWAYS set status to pending for approved properties when they're updated

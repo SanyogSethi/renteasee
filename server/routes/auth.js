@@ -88,6 +88,8 @@ router.post('/register', upload.single('document'), async (req, res) => {
     // Verify document if provided
     let isVerified = false;
     let detectedDocumentType = null;
+    let relativePath = null; // Declare outside if block
+    
     if (req.file) {
       console.log('✅ File received, verifying...');
       const documentPath = req.file.path;
@@ -98,6 +100,11 @@ router.post('/register', upload.single('document'), async (req, res) => {
       } else {
         console.error('❌ Document file does NOT exist:', documentPath);
       }
+      
+      // Convert absolute path to relative path for database storage
+      relativePath = documentPath.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
+      console.log('✅ Saving document relative path:', relativePath);
+      
       const { documentNumber } = req.body; // Get document number from user input
       
       // Pass user's name (for identification) and document number to verification service
@@ -157,7 +164,7 @@ router.post('/register', upload.single('document'), async (req, res) => {
       phone,
       role,
       isVerified,
-      verificationDocument: req.file.path,
+      verificationDocument: req.file ? relativePath : null,
       documentType: detectedDocumentType || documentType || 'unknown'
     });
 
