@@ -27,33 +27,44 @@ async function migrateChatImagesToMongoDB() {
       const imageBuffer = fs.readFileSync(stockImagePath);
       const imageStats = fs.statSync(stockImagePath);
       
-      // Check if stock image already exists in MongoDB
-      let existingStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
+      // Check if default property image exists in MongoDB (preferred)
+      let existingStockImage = await Image.findOne({ filename: 'default-property-image.jpg' });
       if (!existingStockImage) {
-        console.log('💾 Creating stock image in MongoDB...');
+        // Fallback to stock-image.jpg if default-property-image doesn't exist
+        existingStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
+      }
+      
+      if (!existingStockImage) {
+        console.log('💾 Creating default image in MongoDB...');
         const stockImage = new Image({
-          filename: 'stock-image.jpg',
+          filename: 'default-property-image.jpg',
           mimetype: 'image/jpeg',
           data: imageBuffer,
           size: imageStats.size
         });
         await stockImage.save();
         stockImageId = stockImage._id.toString();
-        console.log('✅ Created stock image:', stockImageId);
+        console.log('✅ Created default image:', stockImageId);
       } else {
         stockImageId = existingStockImage._id.toString();
-        console.log('✅ Using existing stock image:', stockImageId);
+        console.log('✅ Using existing default image:', stockImageId);
       }
     } else {
       console.log('⚠️  Stock image file not found, checking MongoDB...');
-      const existingStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
-      if (existingStockImage) {
-        stockImageId = existingStockImage._id.toString();
-        console.log('✅ Found stock image in MongoDB:', stockImageId);
+      const existingStockImage = await Image.findOne({ filename: 'default-property-image.jpg' });
+      if (!existingStockImage) {
+        const fallbackStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
+        if (fallbackStockImage) {
+          stockImageId = fallbackStockImage._id.toString();
+          console.log('✅ Found stock image in MongoDB:', stockImageId);
+        } else {
+          console.error('❌ No default image found in MongoDB!');
+          console.log('   Please run scripts/replaceLogoWithDefaultImage.js first');
+          process.exit(1);
+        }
       } else {
-        console.error('❌ No stock image found in MongoDB or filesystem!');
-        console.log('   Please run scripts/addImagesToProductionDB.js first');
-        process.exit(1);
+        stockImageId = existingStockImage._id.toString();
+        console.log('✅ Found default image in MongoDB:', stockImageId);
       }
     }
 
