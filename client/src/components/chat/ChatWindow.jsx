@@ -472,6 +472,10 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
                   src={getImageUrl(zoomedImage)}
                   alt="Zoomed"
                   className="zoomed-image"
+                  onError={(e) => {
+                    console.error('Failed to load zoomed image:', zoomedImage);
+                    e.target.src = '/-2.jpg';
+                  }}
                   style={{
                     transform: `scale(${zoomLevel})`,
                     transition: 'transform 0.1s ease-out'
