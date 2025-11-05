@@ -9,7 +9,11 @@ const PropertyImageCarousel = ({ images, propertyTitle }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   const imageUrls = images && images.length > 0 
-    ? images.map(img => getImageUrl(img))
+    ? images.map(img => {
+        const url = getImageUrl(img)
+        console.log('🖼️ Image URL:', { original: img, constructed: url })
+        return url
+      })
     : ['/-2.jpg']
 
   useEffect(() => {
@@ -45,6 +49,11 @@ const PropertyImageCarousel = ({ images, propertyTitle }) => {
   }
 
   const handleImageError = (index) => {
+    console.error(`❌ Image failed to load:`, {
+      index,
+      url: imageUrls[index],
+      originalPath: images[index]
+    })
     setImageError(prev => ({ ...prev, [index]: true }))
     setImageLoading(false)
   }
