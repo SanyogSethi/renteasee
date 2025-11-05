@@ -1,0 +1,96 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Beige color palette inspired by RentEase */
+  --beige-50: #faf9f6;
+  --beige-100: #f5f3ef;
+  --beige-200: #e8e4db;
+  --beige-300: #d6cfc1;
+  --beige-400: #c4baa7;
+  --beige-500: #b3a593;
+  --beige-600: #9d8e7a;
+  --beige-700: #7a6d5d;
+  --beige-800: #5d5244;
+  --beige-900: #3d362c;
+  
+  --primary: var(--beige-600);
+  --primary-dark: var(--beige-700);
+  --primary-light: var(--beige-400);
+  --background: var(--beige-50);
+  --surface: #ffffff;
+  --text-primary: var(--beige-900);
+  --text-secondary: var(--beige-700);
+  --border: var(--beige-200);
+  --success: #4caf50;
+  --error: #f44336;
+  --warning: #ff9800;
+  --info: #2196f3;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--beige-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--beige-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--beige-500);
+}
+
+

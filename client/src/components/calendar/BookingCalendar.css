@@ -1,0 +1,186 @@
+.booking-calendar {
+  background-color: var(--surface);
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.react-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  background-color: transparent;
+}
+
+.react-calendar__tile {
+  border-radius: 4px;
+  margin: 2px;
+}
+
+.react-calendar__tile--now {
+  background-color: var(--beige-100);
+}
+
+.react-calendar__tile--active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.react-calendar__tile.booked-date {
+  background-color: #ffebee;
+  color: var(--error);
+  font-weight: 600;
+  cursor: not-allowed;
+  pointer-events: auto;
+  opacity: 1 !important;
+}
+
+/* Override disabled styling for booked dates - they should be visible and red */
+.react-calendar__tile.booked-date:disabled {
+  background-color: #ffebee !important;
+  color: var(--error) !important;
+  opacity: 1 !important;
+}
+
+/* Ensure booked dates are visible and not grayed out */
+.react-calendar__tile.booked-date:hover {
+  background-color: #ffcdd2;
+}
+
+/* Override weekend colors - ensure weekends aren't red */
+.react-calendar__tile--weekend {
+  color: var(--text-primary);
+}
+
+/* Booked dates should override weekend styling */
+.react-calendar__tile--weekend.booked-date {
+  color: var(--error);
+  background-color: #ffebee;
+}
+
+/* Ensure weekends don't have red text by default */
+.react-calendar__month-view__weekdays__weekday {
+  color: var(--text-primary);
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: var(--text-primary);
+}
+
+/* Booked weekend dates should still be red */
+.react-calendar__month-view__days__day--weekend.booked-date {
+  color: var(--error);
+  background-color: #ffebee;
+}
+
+.react-calendar__tile.selected-date {
+  background-color: var(--primary-light);
+  color: white;
+}
+
+.react-calendar__tile:disabled {
+  background-color: #f5f5f5;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.calendar-legend {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.legend-color.booked {
+  background-color: #ffebee;
+  border: 1px solid var(--error);
+}
+
+.legend-color.selected {
+  background-color: var(--primary-light);
+}
+
+.selected-dates {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--beige-50);
+  border-radius: 8px;
+}
+
+.selected-dates p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .booking-calendar {
+    padding: 12px;
+  }
+
+  .react-calendar {
+    font-size: 14px;
+  }
+
+  .react-calendar__tile {
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+
+  .calendar-legend {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .legend-item {
+    font-size: 13px;
+  }
+
+  .selected-dates {
+    padding: 10px;
+  }
+
+  .selected-dates p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .booking-calendar {
+    padding: 8px;
+  }
+
+  .react-calendar__tile {
+    padding: 6px 2px;
+    font-size: 12px;
+  }
+
+  .calendar-legend {
+    gap: 6px;
+  }
+
+  .legend-item {
+    font-size: 12px;
+  }
+
+  .legend-color {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+
