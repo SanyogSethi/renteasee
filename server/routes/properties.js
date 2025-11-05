@@ -20,11 +20,14 @@ if (!fs.existsSync(propertiesUploadDir)) {
 // Configure multer for property images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/properties/');
+    // Use absolute path to ensure file is saved correctly on Render
+    cb(null, propertiesUploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'prop-' + uniqueSuffix + path.extname(file.originalname));
+    // Ensure extension is lowercase for consistency
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, 'prop-' + uniqueSuffix + ext);
   }
 });
 
@@ -518,8 +521,20 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
 
     // Check if new images were added
     if (req.files && req.files.length > 0) {
-      property.images = [...property.images, ...req.files.map(file => file.path)];
+      // Verify files were actually saved
+      const newImagePaths = req.files.map(file => {
+        const filePath = file.path;
+        // Verify file exists
+        if (!fs.existsSync(filePath)) {
+          console.error(`⚠️  Warning: Uploaded file not found at: ${filePath}`);
+          // Still return the path - it might be accessible via static serving
+        }
+        return filePath;
+      });
+      
+      property.images = [...(property.images || []), ...newImagePaths];
       hasSignificantChanges = true;
+      console.log(`✓ Added ${newImagePaths.length} new image(s)`);
     }
 
     // ALWAYS set status to pending for approved properties when they're updated

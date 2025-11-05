@@ -20,11 +20,14 @@ if (!fs.existsSync(documentsUploadDir)) {
 // Configure multer for document uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/documents/');
+    // Use absolute path to ensure file is saved correctly on Render
+    cb(null, documentsUploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'doc-' + uniqueSuffix + path.extname(file.originalname));
+    // Ensure extension is lowercase for consistency
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, 'doc-' + uniqueSuffix + ext);
   }
 });
 
