@@ -45,7 +45,27 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve static files from uploads directory
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+
+// Log uploads directory info
+console.log('📁 Uploads directory:', uploadsPath);
+console.log('📁 Uploads directory exists:', fs.existsSync(uploadsPath));
+if (fs.existsSync(uploadsPath)) {
+  const files = fs.readdirSync(uploadsPath);
+  console.log('📁 Uploads directory contents:', files);
+  
+  // Check properties subdirectory
+  const propertiesPath = path.join(uploadsPath, 'properties');
+  if (fs.existsSync(propertiesPath)) {
+    const propFiles = fs.readdirSync(propertiesPath);
+    console.log(`📁 Properties directory: ${propFiles.length} files`);
+    if (propFiles.length > 0) {
+      console.log('📁 Sample files:', propFiles.slice(0, 5));
+    }
+  }
+}
 
 // MongoDB Connection - Production Ready
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
