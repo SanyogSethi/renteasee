@@ -1,6 +1,7 @@
 const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const documentOCRService = require('../../services/documentOCRService');
 const nameExtractionService = require('./nameExtractionService');

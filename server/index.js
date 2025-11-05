@@ -4,7 +4,20 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
+
+// Ensure upload directories exist
+const uploadsDir = path.join(__dirname, '../uploads');
+const documentsDir = path.join(__dirname, '../uploads/documents');
+const propertiesDir = path.join(__dirname, '../uploads/properties');
+
+[uploadsDir, documentsDir, propertiesDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`✅ Created directory: ${dir}`);
+  }
+});
 
 const app = express();
 const server = http.createServer(app);
