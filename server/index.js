@@ -79,7 +79,7 @@ app.use('/uploads', (req, res, next) => {
     // File exists, serve it directly
     res.sendFile(filePath);
   } else {
-    // File doesn't exist (ephemeral filesystem issue on Render)
+    // File doesn't exist (ephemeral filesystem issue on Render or old path-based image)
     console.log(`⚠️  File not found: ${req.path} -> Serving default image`);
     
     // Try to serve default image
@@ -89,7 +89,8 @@ app.use('/uploads', (req, res, next) => {
       // If default image doesn't exist, return 404
       res.status(404).json({ 
         message: 'Image not found. File may have been lost due to ephemeral filesystem on Render.',
-        path: req.path
+        path: req.path,
+        note: 'All new uploads are stored in MongoDB and persist across deployments.'
       });
     }
   }
