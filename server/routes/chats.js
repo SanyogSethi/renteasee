@@ -255,16 +255,11 @@ router.post('/:id/message', auth, (req, res) => {
       // Convert absolute path to relative path for storage
       let imageUrl = null;
       if (req.file && req.file.path) {
-        // Extract relative path - ensure it starts with uploads/ (not server/uploads/)
-        // The file.path is absolute, so we need to find uploads/ in it
-        const pathMatch = req.file.path.match(/(uploads\/.+)$/);
-        if (pathMatch) {
-          imageUrl = pathMatch[1]; // e.g., "uploads/chats/chat-xxx.png"
-        } else {
-          // Fallback: if path doesn't contain "uploads/", construct it
-          const filename = path.basename(req.file.path);
-          imageUrl = `uploads/chats/${filename}`;
-        }
+        // Convert absolute path to relative path for database storage
+        // Remove the project root path, keep only uploads/... part
+        const relativePath = req.file.path.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
+        console.log(`✅ Chat image: Converting ${req.file.path} -> ${relativePath}`);
+        imageUrl = relativePath;
       }
 
       const message = {
