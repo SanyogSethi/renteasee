@@ -58,6 +58,14 @@ const Register = () => {
       await register(data)
       navigate('/dashboard')
     } catch (err) {
+      console.error('Registration error:', err)
+      
+      // Handle network errors
+      if (!err.response) {
+        setError('Network error: Unable to connect to server. Please check your internet connection and try again.')
+        return
+      }
+      
       const errorMessage = err.response?.data?.message || 'Registration failed'
       let detailedError = errorMessage
       
@@ -68,6 +76,11 @@ const Register = () => {
         const failedParams = params.filter(p => !p.passed).map(p => p.name)
         
         detailedError = `${errorMessage}\n\nPassed: ${passedParams.join(', ') || 'None'}\nFailed: ${failedParams.join(', ') || 'None'}`
+      }
+      
+      // Show recommendations if available
+      if (err.response?.data?.recommendations) {
+        detailedError += `\n\nTips: ${err.response.data.recommendations.join(', ')}`
       }
       
       setError(detailedError)
@@ -156,7 +169,9 @@ const Register = () => {
               <small className="form-hint">Upload a clear image of your government-issued ID</small>
             </div>
             <div className="form-group">
-              <label className="form-label">Document Number</label>
+              <label className="form-label">
+                Document Number <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="text"
                 name="documentNumber"
@@ -165,8 +180,11 @@ const Register = () => {
                 onChange={handleChange}
                 placeholder="Enter your Aadhaar/PAN/License number"
                 required
+                style={{ borderColor: !formData.documentNumber ? '#ff4444' : '' }}
               />
-              <small className="form-hint">Enter the number from your uploaded document</small>
+              <small className="form-hint" style={{ color: !formData.documentNumber ? '#ff4444' : '#666' }}>
+                {!formData.documentNumber ? '⚠️ Document number is required' : 'Enter the number from your uploaded document'}
+              </small>
             </div>
             <button type="submit" className="btn btn-primary w-full" disabled={loading}>
               {loading ? 'Registering...' : 'Register'}
