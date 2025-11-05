@@ -12,7 +12,20 @@ router.get('/:id', async (req, res) => {
     if (!image) {
       console.log(`⚠️  Image not found in MongoDB: ${req.params.id}`);
       
-      // Try to serve default image as fallback
+      // Try to find default stock image in MongoDB
+      const defaultImage = await Image.findOne({ filename: 'stock-image.jpg' });
+      
+      if (defaultImage) {
+        console.log(`📷 Serving default stock image from MongoDB: ${defaultImage._id}`);
+        res.set({
+          'Content-Type': defaultImage.mimetype,
+          'Content-Length': defaultImage.size,
+          'Cache-Control': 'public, max-age=31536000'
+        });
+        return res.send(defaultImage.data);
+      }
+      
+      // Last resort: try filesystem (only works in development)
       const defaultImagePath = path.join(__dirname, '../../assets/RENTEASE.jpg');
       const altDefaultPath = path.join(__dirname, '../../assets/-2.jpg');
       
@@ -24,7 +37,7 @@ router.get('/:id', async (req, res) => {
       }
       
       if (fallbackPath) {
-        console.log(`📷 Serving default image fallback: ${fallbackPath}`);
+        console.log(`📷 Serving default image from filesystem: ${fallbackPath}`);
         res.set({
           'Content-Type': 'image/jpeg',
           'Cache-Control': 'public, max-age=31536000'
@@ -51,8 +64,21 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error serving image:', error);
     
-    // Try to serve default image on error
+    // Try to serve default image from MongoDB on error
     try {
+      const defaultImage = await Image.findOne({ filename: 'stock-image.jpg' });
+      
+      if (defaultImage) {
+        console.log(`📷 Serving default stock image after error: ${defaultImage._id}`);
+        res.set({
+          'Content-Type': defaultImage.mimetype,
+          'Content-Length': defaultImage.size,
+          'Cache-Control': 'public, max-age=31536000'
+        });
+        return res.send(defaultImage.data);
+      }
+      
+      // Last resort: filesystem
       const defaultImagePath = path.join(__dirname, '../../assets/RENTEASE.jpg');
       const altDefaultPath = path.join(__dirname, '../../assets/-2.jpg');
       
