@@ -3,11 +3,19 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const User = require('../models/User');
 const { verifyDocument } = require('../utils/documentVerification');
 const documentVerificationService = require('../services/documentVerificationService');
 const { auth } = require('../middleware/auth');
 const Notification = require('../models/Notification');
+
+// Ensure upload directories exist
+const documentsUploadDir = path.join(__dirname, '../../uploads/documents');
+if (!fs.existsSync(documentsUploadDir)) {
+  fs.mkdirSync(documentsUploadDir, { recursive: true });
+  console.log(`✅ Created directory: ${documentsUploadDir}`);
+}
 
 // Configure multer for document uploads
 const storage = multer.diskStorage({

@@ -2,12 +2,20 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const Property = require('../models/Property');
 const { auth } = require('../middleware/auth');
 const { isOwner } = require('../middleware/auth');
 const Notification = require('../models/Notification');
 const { io } = require('../index');
 const { calculateDistance } = require('../utils/distance');
+
+// Ensure upload directories exist
+const propertiesUploadDir = path.join(__dirname, '../../uploads/properties');
+if (!fs.existsSync(propertiesUploadDir)) {
+  fs.mkdirSync(propertiesUploadDir, { recursive: true });
+  console.log(`✅ Created directory: ${propertiesUploadDir}`);
+}
 
 // Configure multer for property images
 const storage = multer.diskStorage({
