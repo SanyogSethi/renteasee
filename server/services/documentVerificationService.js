@@ -71,6 +71,12 @@ class DocumentVerificationService {
      */
     async extractTextFromImage(imagePath) {
         try {
+            // Check if file exists
+            if (!fsSync.existsSync(imagePath)) {
+                console.error(`Image file not found: ${imagePath}`);
+                throw new Error(`File not found: ${imagePath}`);
+            }
+
             // Use the existing OCR service
             const result = await documentOCRService.extractTextWithMetadata(imagePath);
             if (result && result.text) {
