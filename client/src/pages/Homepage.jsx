@@ -220,6 +220,8 @@ const Homepage = () => {
   }
 
   useEffect(() => {
+    // Log API URL for debugging
+    console.log('🔍 API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:5050/api')
     fetchProperties()
   }, [])
 
