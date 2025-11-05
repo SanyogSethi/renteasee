@@ -212,8 +212,7 @@ router.post('/:id/message', auth, (req, res) => {
 
       console.log('Creating message:', {
         type: req.file ? 'image' : 'text',
-        hasImage: !!req.file,
-        imagePath: req.file?.path
+        hasImage: !!req.file
       });
 
       // Store image in MongoDB
