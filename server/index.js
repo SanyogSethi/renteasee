@@ -163,6 +163,7 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/images', require('./routes/images')); // Image serving route
 
 const PORT = process.env.PORT || 5050;
 server.listen(PORT, '0.0.0.0', () => {

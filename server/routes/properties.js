@@ -1,51 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const Property = require('../models/Property');
+const Image = require('../models/Image');
 const { auth } = require('../middleware/auth');
 const { isOwner } = require('../middleware/auth');
 const Notification = require('../models/Notification');
 const { io } = require('../index');
 const { calculateDistance } = require('../utils/distance');
+const { propertyImageUpload } = require('../middleware/upload');
 
-// Ensure upload directories exist
-const propertiesUploadDir = path.join(__dirname, '../../uploads/properties');
-if (!fs.existsSync(propertiesUploadDir)) {
-  fs.mkdirSync(propertiesUploadDir, { recursive: true });
-  console.log(`✅ Created directory: ${propertiesUploadDir}`);
-}
-
-// Configure multer for property images
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Use absolute path to ensure file is saved correctly on Render
-    cb(null, propertiesUploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // Ensure extension is lowercase for consistency
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, 'prop-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const upload = propertyImageUpload;
 
 // Get all properties (Homepage) with search and filters
 router.get('/', async (req, res) => {
@@ -224,22 +188,30 @@ router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => 
       addressObj = address;
     }
 
-    const images = req.files ? req.files.map(file => {
-      console.log('Processing image:', file.path);
-      // Verify file exists
-      if (fs.existsSync(file.path)) {
-        console.log('✅ File exists:', file.path);
-      } else {
-        console.error('❌ File does NOT exist:', file.path);
+    // Store images in MongoDB and get their IDs
+    const imageIds = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        console.log('Storing image in MongoDB:', {
+          filename: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+        
+        // Create image document in MongoDB
+        const imageDoc = new Image({
+          filename: file.originalname,
+          mimetype: file.mimetype,
+          data: file.buffer, // Buffer from memory storage
+          size: file.size
+        });
+        
+        await imageDoc.save();
+        imageIds.push(imageDoc._id.toString());
+        console.log('✅ Image saved to MongoDB:', imageDoc._id);
       }
-      // Convert absolute path to relative path for database storage
-      // Remove the project root path, keep only uploads/... part
-      const relativePath = file.path.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
-      console.log('✅ Saving relative path:', relativePath);
-      return relativePath;
-    }) : [];
-    console.log('Total images to save:', images.length);
-    console.log('Image paths:', images);
+    }
+    console.log('Total images saved:', imageIds.length);
 
     // Build amenitiesDetails object
     const amenitiesDetails = {
@@ -266,7 +238,7 @@ router.post('/', auth, isOwner, upload.array('images', 10), async (req, res) => 
       availableCapacity: capacity,
       amenities: amenities ? (Array.isArray(amenities) ? amenities : JSON.parse(amenities)) : [],
       rules: rules ? (Array.isArray(rules) ? rules : JSON.parse(rules)) : [],
-      images,
+      images: imageIds, // Store image IDs instead of paths
       amenitiesDetails,
       status: 'pending' // New properties require admin approval
     });
@@ -572,25 +544,32 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
 
     // Check if new images were added
     if (req.files && req.files.length > 0) {
-      // Verify files were actually saved
-      const newImagePaths = req.files.map(file => {
-        const filePath = file.path;
-        // Verify file exists
-        if (!fs.existsSync(filePath)) {
-          console.error(`⚠️  Warning: Uploaded file not found at: ${filePath}`);
-          // Still return the path - it might be accessible via static serving
-        }
-        // Convert absolute path to relative path for database storage
-        // Remove the project root path, keep only uploads/... part
-        const relativePath = filePath.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
-        console.log(`✅ Converting path: ${filePath} -> ${relativePath}`);
-        return relativePath;
-      });
+      // Store new images in MongoDB
+      const newImageIds = [];
+      for (const file of req.files) {
+        console.log('Storing new image in MongoDB:', {
+          filename: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+        
+        const imageDoc = new Image({
+          filename: file.originalname,
+          mimetype: file.mimetype,
+          data: file.buffer,
+          size: file.size
+        });
+        
+        await imageDoc.save();
+        newImageIds.push(imageDoc._id.toString());
+        console.log('✅ New image saved to MongoDB:', imageDoc._id);
+      }
       
-      property.images = [...(property.images || []), ...newImagePaths];
+      // Combine existing images with new ones
+      property.images = [...(property.images || []), ...newImageIds];
       hasSignificantChanges = true;
-      console.log(`✓ Added ${newImagePaths.length} new image(s)`);
-      console.log(`✓ Image paths saved:`, newImagePaths);
+      console.log(`✓ Added ${newImageIds.length} new image(s)`);
+      console.log(`✓ Total images now: ${property.images.length}`);
     }
 
     // ALWAYS set status to pending for approved properties when they're updated

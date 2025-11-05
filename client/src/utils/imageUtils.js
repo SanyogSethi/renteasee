@@ -31,6 +31,17 @@ export const getImageUrl = (imagePath) => {
     return imagePath
   }
   
+  // Check if it's a MongoDB ObjectId (24 hex characters)
+  const objectIdPattern = /^[0-9a-fA-F]{24}$/
+  if (objectIdPattern.test(imagePath)) {
+    // It's an image ID, use the image serving endpoint
+    const baseUrl = getApiBaseUrl()
+    const imageUrl = `${baseUrl}/api/images/${imagePath}`
+    console.log('🔍 MongoDB Image ID:', { imagePath, imageUrl })
+    return imageUrl
+  }
+  
+  // Legacy path-based images (for backward compatibility)
   // Normalize the path
   let normalizedPath = imagePath
   if (!normalizedPath.startsWith('uploads/') && !normalizedPath.startsWith('/uploads/')) {
@@ -40,7 +51,7 @@ export const getImageUrl = (imagePath) => {
   
   const baseUrl = getApiBaseUrl()
   const fullUrl = `${baseUrl}/${normalizedPath}`
-  console.log('🔍 Constructed image URL:', { imagePath, normalizedPath, baseUrl, fullUrl })
+  console.log('🔍 Legacy path-based image:', { imagePath, normalizedPath, baseUrl, fullUrl })
   
   return fullUrl
 }
