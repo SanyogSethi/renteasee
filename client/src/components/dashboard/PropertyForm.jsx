@@ -227,13 +227,9 @@ const PropertyForm = ({ property, onClose, onSuccess }) => {
       }
 
       if (property) {
-        await api.put(`/properties/${property._id}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.put(`/properties/${property._id}`, data)
       } else {
-        await api.post('/properties', data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.post('/properties', data)
       }
 
       onSuccess()

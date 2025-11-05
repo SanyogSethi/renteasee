@@ -172,9 +172,7 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
         formData.append('content', messageContent)
       }
 
-      const response = await api.post(`/chats/${chat._id}/message`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const response = await api.post(`/chats/${chat._id}/message`, formData)
       
       // Replace optimistic message with real message from server
       // The socket will also receive it, but we want to ensure it's updated immediately
@@ -257,9 +255,7 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
       const formData = new FormData()
       formData.append('image', file)
       
-      const response = await api.post(`/chats/${chat._id}/message`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const response = await api.post(`/chats/${chat._id}/message`, formData)
       
       // Add message to UI
       setMessages(prev => {
