@@ -238,7 +238,32 @@ const PropertyForm = ({ property, onClose, onSuccess }) => {
 
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save property')
+      console.error('Property save error:', err)
+      
+      // Handle network errors
+      if (!err.response) {
+        setError('Network error: Unable to connect to backend server. Please check if the backend is running.')
+        return
+      }
+      
+      // Handle backend errors
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to save property'
+      const status = err.response?.status
+      
+      let detailedError = errorMessage
+      if (status === 401) {
+        detailedError = 'Authentication failed. Please log in again.'
+      } else if (status === 403) {
+        detailedError = 'You are not authorized to update this property.'
+      } else if (status === 404) {
+        detailedError = 'Property not found.'
+      } else if (status === 500) {
+        detailedError = 'Server error: ' + errorMessage
+      } else if (status) {
+        detailedError = `Error ${status}: ${errorMessage}`
+      }
+      
+      setError(detailedError)
     } finally {
       setLoading(false)
     }
