@@ -249,10 +249,23 @@ const Homepage = () => {
 
       const queryString = params.toString()
       const url = queryString ? `/properties?${queryString}` : '/properties'
+      
+      console.log('🔍 Fetching properties from:', url)
       const response = await api.get(url)
-      setProperties(response.data)
+      console.log('✅ Properties received:', response.data?.length || 0)
+      
+      // Ensure we set properties even if empty array
+      setProperties(response.data || [])
     } catch (error) {
-      console.error('Error fetching properties:', error)
+      console.error('❌ Error fetching properties:', error)
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      })
+      // Set empty array on error to prevent undefined state
+      setProperties([])
     } finally {
       setLoading(false)
     }
