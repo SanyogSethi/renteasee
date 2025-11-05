@@ -45,9 +45,10 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 // Serve static files from uploads directory
 const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
+const defaultImagePath = path.join(__dirname, '../assets/-2.jpg');
 
 // Log uploads directory info
 console.log('📁 Uploads directory:', uploadsPath);
@@ -63,9 +64,36 @@ if (fs.existsSync(uploadsPath)) {
     console.log(`📁 Properties directory: ${propFiles.length} files`);
     if (propFiles.length > 0) {
       console.log('📁 Sample files:', propFiles.slice(0, 5));
+    } else {
+      console.log('⚠️  Properties directory is empty - files may have been lost due to ephemeral filesystem');
     }
   }
 }
+
+// Serve static files with fallback for missing files
+app.use('/uploads', (req, res, next) => {
+  const filePath = path.join(uploadsPath, req.path);
+  
+  // Check if file exists
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    // File exists, serve it using express.static
+    express.static(uploadsPath)(req, res, next);
+  } else {
+    // File doesn't exist (ephemeral filesystem issue on Render)
+    console.log(`⚠️  File not found: ${req.path} -> Serving default image`);
+    
+    // Try to serve default image
+    if (fs.existsSync(defaultImagePath)) {
+      res.sendFile(defaultImagePath);
+    } else {
+      // If default image doesn't exist, return 404
+      res.status(404).json({ 
+        message: 'Image not found. File may have been lost due to ephemeral filesystem on Render.',
+        path: req.path
+      });
+    }
+  }
+});
 
 // MongoDB Connection - Production Ready
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
