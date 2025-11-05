@@ -42,7 +42,18 @@ export const getImageUrl = (imagePath) => {
   }
   
   // Legacy path-based images (for backward compatibility)
-  // Normalize the path
+  // Check if it's a chat image path
+  if (imagePath.includes('/chats/') || imagePath.startsWith('chats/')) {
+    // Chat images: try MongoDB first, then fallback to static
+    const baseUrl = getApiBaseUrl()
+    // Try to extract potential ObjectId from path, or use path directly
+    const normalizedPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+    const fullUrl = `${baseUrl}/${normalizedPath}`
+    console.log('🔍 Chat image path:', { imagePath, normalizedPath, fullUrl })
+    return fullUrl
+  }
+  
+  // Property images or other paths
   let normalizedPath = imagePath
   if (!normalizedPath.startsWith('uploads/') && !normalizedPath.startsWith('/uploads/')) {
     normalizedPath = normalizedPath.startsWith('/') ? normalizedPath : `uploads/${normalizedPath}`

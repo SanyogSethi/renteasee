@@ -376,6 +376,11 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
                     alt="Shared"
                     className="message-image"
                     onClick={() => handleImageClick(message.imageUrl)}
+                    onError={(e) => {
+                      console.error('Failed to load chat image:', message.imageUrl);
+                      // Replace with default image on error
+                      e.target.src = '/-2.jpg';
+                    }}
                     style={{ cursor: 'pointer' }}
                   />
                   <span className="message-time">
