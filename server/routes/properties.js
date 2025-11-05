@@ -376,23 +376,59 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
       }
     }
     if (amenities !== undefined) {
-      const newAmenities = Array.isArray(amenities) ? amenities : JSON.parse(amenities);
-      const currentAmenities = (property.amenities || []).sort();
-      const newAmenitiesSorted = newAmenities.sort();
-      if (JSON.stringify(currentAmenities) !== JSON.stringify(newAmenitiesSorted)) {
-        property.amenities = newAmenities;
-        hasSignificantChanges = true;
-        console.log(`✓ Amenities changed`);
+      try {
+        let newAmenities;
+        if (Array.isArray(amenities)) {
+          newAmenities = amenities;
+        } else if (typeof amenities === 'string') {
+          try {
+            newAmenities = JSON.parse(amenities);
+          } catch (e) {
+            // If JSON parse fails, try treating as comma-separated string
+            newAmenities = amenities.split(',').map(a => a.trim()).filter(a => a.length > 0);
+          }
+        } else {
+          newAmenities = [];
+        }
+        
+        const currentAmenities = (property.amenities || []).sort();
+        const newAmenitiesSorted = Array.isArray(newAmenities) ? newAmenities.sort() : [];
+        if (JSON.stringify(currentAmenities) !== JSON.stringify(newAmenitiesSorted)) {
+          property.amenities = newAmenities;
+          hasSignificantChanges = true;
+          console.log(`✓ Amenities changed`);
+        }
+      } catch (error) {
+        console.error('Error parsing amenities:', error);
+        // Don't update amenities if parsing fails
       }
     }
     if (rules !== undefined) {
-      const newRules = Array.isArray(rules) ? rules : JSON.parse(rules);
-      const currentRules = (property.rules || []).sort();
-      const newRulesSorted = newRules.sort();
-      if (JSON.stringify(currentRules) !== JSON.stringify(newRulesSorted)) {
-        property.rules = newRules;
-        hasSignificantChanges = true;
-        console.log(`✓ Rules changed`);
+      try {
+        let newRules;
+        if (Array.isArray(rules)) {
+          newRules = rules;
+        } else if (typeof rules === 'string') {
+          try {
+            newRules = JSON.parse(rules);
+          } catch (e) {
+            // If JSON parse fails, try treating as comma-separated string
+            newRules = rules.split(',').map(r => r.trim()).filter(r => r.length > 0);
+          }
+        } else {
+          newRules = [];
+        }
+        
+        const currentRules = (property.rules || []).sort();
+        const newRulesSorted = Array.isArray(newRules) ? newRules.sort() : [];
+        if (JSON.stringify(currentRules) !== JSON.stringify(newRulesSorted)) {
+          property.rules = newRules;
+          hasSignificantChanges = true;
+          console.log(`✓ Rules changed`);
+        }
+      } catch (error) {
+        console.error('Error parsing rules:', error);
+        // Don't update rules if parsing fails
       }
     }
     
@@ -593,6 +629,22 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
       }
     }
 
+    // Ensure required fields are present before saving
+    if (!property.title || !property.description || !property.price || !property.capacity) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        error: 'Title, description, price, and capacity are required'
+      });
+    }
+
+    // Ensure availableCapacity is valid
+    if (property.availableCapacity === undefined || property.availableCapacity === null) {
+      property.availableCapacity = property.capacity;
+    }
+    if (property.availableCapacity > property.capacity) {
+      property.availableCapacity = property.capacity;
+    }
+
     await property.save();
     
     // Log final status for debugging
@@ -601,7 +653,17 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
     res.json(property);
   } catch (error) {
     console.error('Update property error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error stack:', error.stack);
+    
+    // Provide more detailed error message
+    let errorMessage = 'Server error';
+    if (error.name === 'ValidationError') {
+      errorMessage = `Validation error: ${Object.values(error.errors).map(e => e.message).join(', ')}`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 });
 
