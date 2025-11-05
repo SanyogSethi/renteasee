@@ -21,23 +21,55 @@ const propertiesDir = path.join(__dirname, '../uploads/properties');
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS Configuration - Production Ready
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER;
+
+// Socket.io CORS Configuration
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: CLIENT_URL,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
-// Middleware
-app.use(cors());
+// CORS Middleware - Allow frontend origin
+app.use(cors({
+  origin: CLIENT_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rentease')
-.then(() => console.log('MongoDB Connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+// MongoDB Connection - Production Ready
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+if (!MONGODB_URI && isProduction) {
+  console.error('❌ ERROR: MONGODB_URI environment variable is required in production!');
+  process.exit(1);
+}
+
+mongoose.connect(MONGODB_URI || 'mongodb://localhost:27017/rentease')
+.then(() => {
+  console.log('✅ MongoDB Connected');
+  if (isProduction) {
+    console.log('✅ Running in PRODUCTION mode');
+    console.log(`✅ Frontend URL: ${CLIENT_URL}`);
+  } else {
+    console.log('⚠️  Running in DEVELOPMENT mode');
+  }
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err);
+  if (isProduction) {
+    process.exit(1);
+  }
+});
 
 // Socket.io for real-time chat and notifications
 io.on('connection', (socket) => {
@@ -85,8 +117,11 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./routes/admin'));
 
 const PORT = process.env.PORT || 5050;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  if (isProduction) {
+    console.log(`✅ Server accessible at: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}`);
+  }
 });
 
 
