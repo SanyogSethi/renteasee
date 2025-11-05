@@ -377,7 +377,10 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
                     className="message-image"
                     onClick={() => handleImageClick(message.imageUrl)}
                     onError={(e) => {
-                      console.error('Failed to load chat image:', message.imageUrl);
+                      // Only log in development
+                      if (!import.meta.env.PROD) {
+                        console.error('Failed to load chat image:', message.imageUrl);
+                      }
                       // Replace with default image on error
                       e.target.src = '/-2.jpg';
                     }}
@@ -473,7 +476,10 @@ const ChatWindow = ({ chat, onClose, onUpdate }) => {
                   alt="Zoomed"
                   className="zoomed-image"
                   onError={(e) => {
-                    console.error('Failed to load zoomed image:', zoomedImage);
+                    // Only log in development
+                    if (!import.meta.env.PROD) {
+                      console.error('Failed to load zoomed image:', zoomedImage);
+                    }
                     e.target.src = '/-2.jpg';
                   }}
                   style={{
