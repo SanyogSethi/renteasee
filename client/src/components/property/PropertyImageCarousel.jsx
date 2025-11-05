@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getImageUrl } from '../../utils/imageUtils'
 import './PropertyImageCarousel.css'
 
@@ -7,11 +7,15 @@ const PropertyImageCarousel = ({ images, propertyTitle }) => {
   const [imageError, setImageError] = useState({})
   const [imageLoading, setImageLoading] = useState(true)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const imageRefs = useRef({})
 
   const imageUrls = images && images.length > 0 
     ? images.map(img => {
         const url = getImageUrl(img)
-        console.log('🖼️ Image URL:', { original: img, constructed: url })
+        // Only log in development
+        if (!import.meta.env.PROD) {
+          console.log('🖼️ Image URL:', { original: img, constructed: url })
+        }
         return url
       })
     : ['/-2.jpg']
@@ -48,13 +52,24 @@ const PropertyImageCarousel = ({ images, propertyTitle }) => {
     setTimeout(() => setIsTransitioning(false), 300)
   }
 
-  const handleImageError = (index) => {
-    console.error(`❌ Image failed to load:`, {
-      index,
-      url: imageUrls[index],
-      originalPath: images[index]
-    })
-    setImageError(prev => ({ ...prev, [index]: true }))
+  const handleImageError = (index, event) => {
+    // Only log in development
+    if (!import.meta.env.PROD) {
+      console.error(`❌ Image failed to load:`, {
+        index,
+        url: imageUrls[index],
+        originalPath: images[index]
+      })
+    }
+    
+    // Fallback to default image if not already using it
+    const imgElement = event.target
+    if (imgElement && !imgElement.src.includes('/-2.jpg')) {
+      imgElement.src = '/-2.jpg'
+      setImageError(prev => ({ ...prev, [index]: false })) // Reset error since we're using fallback
+    } else {
+      setImageError(prev => ({ ...prev, [index]: true }))
+    }
     setImageLoading(false)
   }
 
@@ -80,11 +95,12 @@ const PropertyImageCarousel = ({ images, propertyTitle }) => {
                 </div>
               )}
               <img
+                ref={el => imageRefs.current[index] = el}
                 src={url}
                 alt={`${propertyTitle || 'Property'} - Image ${index + 1}`}
                 className={`carousel-image ${imageLoading && index === currentIndex ? 'loading' : ''}`}
                 onLoad={handleImageLoad}
-                onError={() => handleImageError(index)}
+                onError={(e) => handleImageError(index, e)}
               />
               {imageError[index] && (
                 <div className="carousel-error">

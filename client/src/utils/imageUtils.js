@@ -5,11 +5,9 @@ export const getApiBaseUrl = () => {
   if (import.meta.env.PROD) {
     // Production: use VITE_API_URL but remove /api suffix for image paths and Socket.io
     const apiUrl = import.meta.env.VITE_API_URL || ''
-    console.log('🔍 VITE_API_URL:', apiUrl)
     if (apiUrl) {
       // Remove /api suffix if present (for Socket.io and image paths)
       const baseUrl = apiUrl.replace(/\/api$/, '')
-      console.log('🔍 Base URL for images:', baseUrl)
       return baseUrl
     }
     // Fallback (should not happen if env var is set correctly)
@@ -21,13 +19,11 @@ export const getApiBaseUrl = () => {
 // Helper function to get full image URL
 export const getImageUrl = (imagePath) => {
   if (!imagePath) {
-    console.log('⚠️ No image path provided')
     return '/-2.jpg'
   }
   
   // If it's already a full URL, return as is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    console.log('🔍 Already full URL:', imagePath)
     return imagePath
   }
   
@@ -37,7 +33,6 @@ export const getImageUrl = (imagePath) => {
     // It's an image ID, use the image serving endpoint
     const baseUrl = getApiBaseUrl()
     const imageUrl = `${baseUrl}/api/images/${imagePath}`
-    console.log('🔍 MongoDB Image ID:', { imagePath, imageUrl })
     return imageUrl
   }
   
@@ -49,7 +44,6 @@ export const getImageUrl = (imagePath) => {
     // Try to extract potential ObjectId from path, or use path directly
     const normalizedPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
     const fullUrl = `${baseUrl}/${normalizedPath}`
-    console.log('🔍 Chat image path:', { imagePath, normalizedPath, fullUrl })
     return fullUrl
   }
   
@@ -62,7 +56,6 @@ export const getImageUrl = (imagePath) => {
   
   const baseUrl = getApiBaseUrl()
   const fullUrl = `${baseUrl}/${normalizedPath}`
-  console.log('🔍 Legacy path-based image:', { imagePath, normalizedPath, baseUrl, fullUrl })
   
   return fullUrl
 }

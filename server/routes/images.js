@@ -10,7 +10,10 @@ router.get('/:id', async (req, res) => {
     const image = await Image.findById(req.params.id);
     
     if (!image) {
-      console.log(`⚠️  Image not found in MongoDB: ${req.params.id}`);
+      // Log in development, but don't spam production logs
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`⚠️  Image not found in MongoDB: ${req.params.id}`);
+      }
       
       // Return 404 instead of falling back to stock image
       // This allows frontend to handle missing images properly
@@ -25,7 +28,8 @@ router.get('/:id', async (req, res) => {
     res.set({
       'Content-Type': image.mimetype,
       'Content-Length': image.size,
-      'Cache-Control': 'public, max-age=31536000' // Cache for 1 year
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'Access-Control-Allow-Origin': process.env.CLIENT_URL || '*'
     });
     
     // Send image data
@@ -36,7 +40,7 @@ router.get('/:id', async (req, res) => {
     // Return error instead of falling back
     res.status(500).json({ 
       message: 'Error serving image', 
-      error: error.message 
+      error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message 
     });
   }
 });
