@@ -76,8 +76,8 @@ app.use('/uploads', (req, res, next) => {
   
   // Check if file exists
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    // File exists, serve it using express.static
-    express.static(uploadsPath)(req, res, next);
+    // File exists, serve it directly
+    res.sendFile(filePath);
   } else {
     // File doesn't exist (ephemeral filesystem issue on Render)
     console.log(`⚠️  File not found: ${req.path} -> Serving default image`);
