@@ -1,49 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const Chat = require('../models/Chat');
+const Image = require('../models/Image');
 const { auth } = require('../middleware/auth');
 const Notification = require('../models/Notification');
 const { io } = require('../index');
+const { chatImageUpload } = require('../middleware/upload');
 
-// Configure multer for chat images
-const fs = require('fs');
-// Save to uploads/chats/ (relative to project root, not server/)
-const uploadDir = path.join(__dirname, '../../uploads/chats/');
-// Ensure directory exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Use absolute path to ensure file is saved correctly on Render
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // Ensure extension is lowercase for consistency
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, 'chat-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const upload = chatImageUpload;
 
 // Get all chats for current user
 router.get('/', auth, async (req, res) => {
@@ -252,14 +216,25 @@ router.post('/:id/message', auth, (req, res) => {
         imagePath: req.file?.path
       });
 
-      // Convert absolute path to relative path for storage
+      // Store image in MongoDB
       let imageUrl = null;
-      if (req.file && req.file.path) {
-        // Convert absolute path to relative path for database storage
-        // Remove the project root path, keep only uploads/... part
-        const relativePath = req.file.path.replace(/^.*uploads/, 'uploads').replace(/\\/g, '/');
-        console.log(`✅ Chat image: Converting ${req.file.path} -> ${relativePath}`);
-        imageUrl = relativePath;
+      if (req.file && req.file.buffer) {
+        console.log('Storing chat image in MongoDB:', {
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        });
+        
+        const imageDoc = new Image({
+          filename: req.file.originalname,
+          mimetype: req.file.mimetype,
+          data: req.file.buffer,
+          size: req.file.size
+        });
+        
+        await imageDoc.save();
+        imageUrl = imageDoc._id.toString();
+        console.log('✅ Chat image saved to MongoDB:', imageDoc._id);
       }
 
       const message = {
@@ -341,13 +316,7 @@ router.post('/:id/message', auth, (req, res) => {
       console.error('Send message error:', error);
       console.error('Error stack:', error.stack);
       // Delete uploaded file if there was an error after upload
-      if (req.file && req.file.path) {
-        try {
-          await require('fs').promises.unlink(req.file.path).catch(() => {});
-        } catch (unlinkError) {
-          console.error('Error deleting uploaded file:', unlinkError);
-        }
-      }
+      // No need to delete since we're using memory storage
       res.status(500).json({ 
         message: 'Server error', 
         error: error.message,
