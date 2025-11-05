@@ -4,11 +4,15 @@ const Image = require('../server/models/Image');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 
 async function migrateChatImagesToMongoDB() {
   try {
-    // Connect to MongoDB
+    // Connect to MongoDB - use production URI if available
     const mongoURI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/rentease';
+    const maskedUri = mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    console.log('🔌 Connecting to MongoDB:', maskedUri);
+    
     await mongoose.connect(mongoURI);
     console.log('✅ Connected to MongoDB\n');
 
@@ -26,6 +30,7 @@ async function migrateChatImagesToMongoDB() {
       // Check if stock image already exists in MongoDB
       let existingStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
       if (!existingStockImage) {
+        console.log('💾 Creating stock image in MongoDB...');
         const stockImage = new Image({
           filename: 'stock-image.jpg',
           mimetype: 'image/jpeg',
@@ -34,36 +39,77 @@ async function migrateChatImagesToMongoDB() {
         });
         await stockImage.save();
         stockImageId = stockImage._id.toString();
-        console.log('✅ Created stock image in MongoDB:', stockImageId);
+        console.log('✅ Created stock image:', stockImageId);
       } else {
         stockImageId = existingStockImage._id.toString();
         console.log('✅ Using existing stock image:', stockImageId);
       }
+    } else {
+      console.log('⚠️  Stock image file not found, checking MongoDB...');
+      const existingStockImage = await Image.findOne({ filename: 'stock-image.jpg' });
+      if (existingStockImage) {
+        stockImageId = existingStockImage._id.toString();
+        console.log('✅ Found stock image in MongoDB:', stockImageId);
+      } else {
+        console.error('❌ No stock image found in MongoDB or filesystem!');
+        console.log('   Please run scripts/addImagesToProductionDB.js first');
+        process.exit(1);
+      }
     }
 
     // Find all chats with messages that have imageUrl
-    const chats = await Chat.find({ 'messages.imageUrl': { $exists: true, $ne: null } });
-    console.log(`\n📋 Found ${chats.length} chats with image messages\n`);
+    // Also find chats where imageUrl might be in different formats
+    const chats = await Chat.find({ 
+      $or: [
+        { 'messages.imageUrl': { $exists: true, $ne: null } },
+        { 'messages.imageUrl': { $regex: /chat-|uploads|\.png|\.jpg|\.jpeg/i } }
+      ]
+    });
+    console.log(`\n📋 Found ${chats.length} chats (checking for image messages)\n`);
 
     let updatedChats = 0;
     let updatedMessages = 0;
     let skippedMessages = 0;
+    let totalMessagesChecked = 0;
 
     for (const chat of chats) {
       let chatUpdated = false;
       
+      if (!chat.messages || chat.messages.length === 0) continue;
+      
       for (const message of chat.messages) {
         if (!message.imageUrl) continue;
+        
+        totalMessagesChecked++;
 
         // Check if it's already a MongoDB ObjectId
         const objectIdPattern = /^[0-9a-fA-F]{24}$/;
         if (objectIdPattern.test(message.imageUrl)) {
-          skippedMessages++;
-          continue;
+          // Verify it exists in MongoDB
+          const imageExists = await Image.findById(message.imageUrl);
+          if (imageExists) {
+            skippedMessages++;
+            continue;
+          } else {
+            // ObjectId exists but image doesn't - replace with stock image
+            console.log(`⚠️  Image ${message.imageUrl} not found, replacing with stock image`);
+            message.imageUrl = stockImageId;
+            chatUpdated = true;
+            updatedMessages++;
+            continue;
+          }
         }
 
         // It's a path-based image - replace with stock image
-        if (message.imageUrl.startsWith('uploads/') || message.imageUrl.includes('/')) {
+        // Check for various path patterns
+        if (message.imageUrl.startsWith('uploads/') || 
+            message.imageUrl.includes('/chats/') || 
+            message.imageUrl.includes('/uploads/') ||
+            message.imageUrl.includes('chat-') ||
+            message.imageUrl.endsWith('.png') ||
+            message.imageUrl.endsWith('.jpg') ||
+            message.imageUrl.endsWith('.jpeg') ||
+            message.imageUrl.includes('/')) {
           console.log(`🔄 Updating message ${message._id}: "${message.imageUrl}" → MongoDB stock image`);
           
           if (stockImageId) {
@@ -88,6 +134,8 @@ async function migrateChatImagesToMongoDB() {
     }
 
     console.log('\n📊 Summary:');
+    console.log(`   📋 Total chats checked: ${chats.length}`);
+    console.log(`   💬 Total messages checked: ${totalMessagesChecked}`);
     console.log(`   ✅ Updated chats: ${updatedChats}`);
     console.log(`   🔄 Updated messages: ${updatedMessages}`);
     console.log(`   ⏭️  Skipped messages: ${skippedMessages} (already MongoDB IDs)`);
