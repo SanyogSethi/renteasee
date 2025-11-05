@@ -3,9 +3,14 @@ export const getApiBaseUrl = () => {
   // In production, use the API URL from environment
   // In development, use localhost
   if (import.meta.env.PROD) {
-    // Production: use VITE_API_URL but remove /api suffix for image paths
+    // Production: use VITE_API_URL but remove /api suffix for image paths and Socket.io
     const apiUrl = import.meta.env.VITE_API_URL || ''
-    return apiUrl.replace(/\/api$/, '') || 'https://your-backend.railway.app'
+    if (apiUrl) {
+      // Remove /api suffix if present (for Socket.io and image paths)
+      return apiUrl.replace(/\/api$/, '')
+    }
+    // Fallback (should not happen if env var is set correctly)
+    return 'https://rentease-backend-c8wm.onrender.com'
   }
   return 'http://localhost:5050'
 }
