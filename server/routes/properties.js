@@ -336,7 +336,7 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
     }
 
     const { title, description, address, price, capacity, amenities, rules, isAvailable, latitude, longitude,
-            foodAvailability, wifi, ac, laundry, housekeeping, attachedBathroom, parking } = req.body;
+            foodAvailability, wifi, ac, laundry, housekeeping, attachedBathroom, parking, existingImageIds } = req.body;
 
     // Track if any significant changes were made (excluding isAvailable)
     // For old properties without status, treat as 'approved' since they were visible on homepage
@@ -542,10 +542,29 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
       // isAvailable changes don't require re-approval
     }
 
-    // Check if new images were added
+    // Handle image updates: replace images array with kept existing images + new images
+    let imageIdsToKeep = [];
+    
+    // Parse existing image IDs that should be kept (if provided)
+    if (existingImageIds) {
+      try {
+        imageIdsToKeep = typeof existingImageIds === 'string' 
+          ? JSON.parse(existingImageIds) 
+          : existingImageIds;
+        console.log(`✓ Keeping ${imageIdsToKeep.length} existing image(s)`);
+      } catch (error) {
+        console.error('Error parsing existingImageIds:', error);
+        // If parsing fails, keep all existing images as fallback
+        imageIdsToKeep = property.images || [];
+      }
+    } else {
+      // If no existingImageIds provided, keep all existing images (backward compatibility)
+      imageIdsToKeep = property.images || [];
+    }
+    
+    // Store new images in MongoDB if any were uploaded
+    const newImageIds = [];
     if (req.files && req.files.length > 0) {
-      // Store new images in MongoDB
-      const newImageIds = [];
       for (const file of req.files) {
         console.log('Storing new image in MongoDB:', {
           filename: file.originalname,
@@ -564,11 +583,18 @@ router.put('/:id', auth, isOwner, upload.array('images', 10), async (req, res) =
         newImageIds.push(imageDoc._id.toString());
         console.log('✅ New image saved to MongoDB:', imageDoc._id);
       }
-      
-      // Combine existing images with new ones
-      property.images = [...(property.images || []), ...newImageIds];
+    }
+    
+    // Replace images array with kept existing images + new images
+    const finalImageIds = [...imageIdsToKeep, ...newImageIds];
+    
+    // Only update if images actually changed
+    const currentImagesStr = JSON.stringify((property.images || []).sort());
+    const finalImagesStr = JSON.stringify(finalImageIds.sort());
+    if (currentImagesStr !== finalImagesStr) {
+      property.images = finalImageIds;
       hasSignificantChanges = true;
-      console.log(`✓ Added ${newImageIds.length} new image(s)`);
+      console.log(`✓ Images updated: ${imageIdsToKeep.length} kept, ${newImageIds.length} new`);
       console.log(`✓ Total images now: ${property.images.length}`);
     }
 

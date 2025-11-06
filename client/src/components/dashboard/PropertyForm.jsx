@@ -218,11 +218,19 @@ const PropertyForm = ({ property, onClose, onSuccess }) => {
       data.append('attachedBathroom', formData.attachedBathroom)
       data.append('parking', formData.parking)
 
-      if (formData.images.length > 0) {
-        formData.images.forEach(image => {
-          if (image instanceof File) {
-            data.append('images', image)
-          }
+      // Separate existing image IDs (strings) from new File objects
+      const existingImageIds = formData.images.filter(img => typeof img === 'string')
+      const newImageFiles = formData.images.filter(img => img instanceof File)
+      
+      // Send existing image IDs that should be kept
+      if (property && existingImageIds.length > 0) {
+        data.append('existingImageIds', JSON.stringify(existingImageIds))
+      }
+      
+      // Send new image files
+      if (newImageFiles.length > 0) {
+        newImageFiles.forEach(image => {
+          data.append('images', image)
         })
       }
 
