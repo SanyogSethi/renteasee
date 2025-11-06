@@ -11,3 +11,8 @@ client/.env
 
 .env
 client/.env.production
+
+# Documentation/Logging files (keep locally but don't track in git)
+*.md
+!README.md
+!services/**/*.md
