@@ -17,12 +17,60 @@ const Register = () => {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [documentError, setDocumentError] = useState('')
   const { register } = useAuth()
   const navigate = useNavigate()
 
+  // Allowed file formats and size
+  const ALLOWED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+  const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf']
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+
+  const validateDocument = (file) => {
+    if (!file) {
+      setDocumentError('')
+      return { valid: true, error: '' }
+    }
+
+    // Check file type
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+    const isValidFormat = ALLOWED_FORMATS.includes(file.type) || 
+                         ALLOWED_EXTENSIONS.includes(fileExtension)
+
+    if (!isValidFormat) {
+      const errorMsg = `❌ Unsupported file format. Allowed formats: JPEG, JPG, PNG, or PDF`
+      setDocumentError(errorMsg)
+      return { valid: false, error: errorMsg }
+    }
+
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+      const errorMsg = `❌ File size too large (${fileSizeMB} MB). Maximum allowed size: ${maxSizeMB} MB`
+      setDocumentError(errorMsg)
+      return { valid: false, error: errorMsg }
+    }
+
+    // Clear any previous errors
+    setDocumentError('')
+    return { valid: true, error: '' }
+  }
+
   const handleChange = (e) => {
     if (e.target.name === 'document') {
-      setFormData({ ...formData, document: e.target.files[0] })
+      const file = e.target.files[0]
+      if (file) {
+        const validation = validateDocument(file)
+        if (validation.valid) {
+          setFormData({ ...formData, document: file })
+          setError('') // Clear general error when valid file is selected
+        } else {
+          // Clear the file input if validation fails
+          e.target.value = ''
+          setFormData({ ...formData, document: null })
+        }
+      }
     } else {
       setFormData({ ...formData, [e.target.name]: e.target.value })
     }
@@ -31,9 +79,18 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setDocumentError('')
 
+    // Validate document before submission
     if (!formData.document) {
       setError('Please upload a government-issued document for verification')
+      return
+    }
+
+    // Re-validate document on submit
+    const validation = validateDocument(formData.document)
+    if (!validation.valid) {
+      setError(validation.error)
       return
     }
 
@@ -62,12 +119,36 @@ const Register = () => {
       
       // Handle network errors
       if (!err.response) {
-        setError('Network error: Unable to connect to server. Please check your internet connection and try again.')
+        // Check if it's a network error or a file validation error from multer
+        if (err.message && (err.message.includes('Only image and PDF') || err.message.includes('file size'))) {
+          setError(`❌ ${err.message}`)
+        } else {
+          setError('Network error: Unable to connect to server. Please check your internet connection and try again.')
+        }
+        setLoading(false)
         return
       }
       
-      const errorMessage = err.response?.data?.message || 'Registration failed'
-      let detailedError = errorMessage
+      // Handle backend validation errors
+      const status = err.response?.status
+      let errorMessage = err.response?.data?.message || 'Registration failed'
+      
+      // Check for specific file-related errors
+      if (errorMessage.includes('Only image and PDF') || errorMessage.includes('file')) {
+        setError(`❌ Document Error: ${errorMessage}`)
+      } else if (status === 400) {
+        // Bad request - show the specific error message
+        setError(`❌ ${errorMessage}`)
+      } else if (status === 413) {
+        // Payload too large
+        setError('❌ File size too large. Maximum allowed size is 5 MB. Please upload a smaller file.')
+      } else if (status === 500) {
+        // Server error
+        setError(`Server error: ${errorMessage}. Please try again later.`)
+      } else {
+        // Other errors
+        setError(errorMessage)
+      }
       
       // If parameters are provided, show them
       if (err.response?.data?.parameters) {
@@ -75,15 +156,15 @@ const Register = () => {
         const passedParams = params.filter(p => p.passed).map(p => p.name)
         const failedParams = params.filter(p => !p.passed).map(p => p.name)
         
-        detailedError = `${errorMessage}\n\nPassed: ${passedParams.join(', ') || 'None'}\nFailed: ${failedParams.join(', ') || 'None'}`
+        errorMessage += `\n\nPassed: ${passedParams.join(', ') || 'None'}\nFailed: ${failedParams.join(', ') || 'None'}`
+        setError(errorMessage)
       }
       
       // Show recommendations if available
       if (err.response?.data?.recommendations) {
-        detailedError += `\n\nTips: ${err.response.data.recommendations.join(', ')}`
+        errorMessage += `\n\nTips: ${err.response.data.recommendations.join(', ')}`
+        setError(errorMessage)
       }
-      
-      setError(detailedError)
     } finally {
       setLoading(false)
     }
@@ -162,11 +243,24 @@ const Register = () => {
                 type="file"
                 name="document"
                 className="form-input"
-                accept="image/*,.pdf"
+                accept=".jpg,.jpeg,.png,.pdf"
                 onChange={handleChange}
                 required
               />
-              <small className="form-hint">Upload a clear image of your government-issued ID</small>
+              {documentError && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {documentError}
+                </small>
+              )}
+              <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
+                📄 Allowed formats: JPEG, JPG, PNG, or PDF
+              </small>
+              <small className="form-hint" style={{ display: 'block' }}>
+                📏 Maximum file size: 5 MB
+              </small>
+              <small className="form-hint" style={{ display: 'block', marginTop: '4px' }}>
+                Upload a clear image or PDF of your government-issued ID (Aadhaar, PAN, License, or Passport)
+              </small>
             </div>
             <div className="form-group">
               <label className="form-label">

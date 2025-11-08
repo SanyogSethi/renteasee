@@ -55,7 +55,33 @@ const generateToken = (userId) => {
 };
 
 // Register with document verification
-router.post('/register', upload.single('document'), async (req, res) => {
+router.post('/register', (req, res, next) => {
+  upload.single('document')(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ 
+            message: 'File size too large. Maximum allowed size is 5 MB. Please upload a smaller file.' 
+          });
+        }
+        return res.status(400).json({ 
+          message: `File upload error: ${err.message}` 
+        });
+      }
+      // Handle fileFilter errors
+      if (err.message && err.message.includes('Only image and PDF')) {
+        return res.status(400).json({ 
+          message: 'Only image and PDF files are allowed. Allowed formats: JPEG, JPG, PNG, or PDF.' 
+        });
+      }
+      return res.status(400).json({ 
+        message: err.message || 'File upload error' 
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     console.log('\n=== User Registration ===');
     console.log('Request file:', req.file ? {
