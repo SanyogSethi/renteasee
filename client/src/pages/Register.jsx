@@ -18,6 +18,13 @@ const Register = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [documentError, setDocumentError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    documentNumber: ''
+  })
   const { register } = useAuth()
   const navigate = useNavigate()
 
@@ -25,6 +32,114 @@ const Register = () => {
   const ALLOWED_FORMATS = ['image/jpeg', 'image/jpg']
   const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg']
   const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+
+  // Validation functions
+  const validateName = (name) => {
+    if (!name || name.trim() === '') {
+      return 'Full name is required'
+    }
+    if (name.trim().length < 2) {
+      return 'Name must be at least 2 characters long'
+    }
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+      return 'Name can only contain letters and spaces'
+    }
+    return ''
+  }
+
+  const validateEmail = (email) => {
+    if (!email || email.trim() === '') {
+      return 'Email is required'
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      return 'Please enter a valid email address'
+    }
+    return ''
+  }
+
+  const validatePhone = (phone) => {
+    if (!phone || phone.trim() === '') {
+      return 'Phone number is required'
+    }
+    // Remove spaces, dashes, and plus signs for validation
+    const cleanedPhone = phone.replace(/[\s\-+]/g, '')
+    // Indian phone number: 10 digits, or 12 digits if starts with 91
+    if (!/^(\d{10}|91\d{10})$/.test(cleanedPhone)) {
+      return 'Please enter a valid 10-digit phone number'
+    }
+    return ''
+  }
+
+  const validatePassword = (password) => {
+    if (!password || password === '') {
+      return 'Password is required'
+    }
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters long'
+    }
+    if (!/[a-zA-Z]/.test(password)) {
+      return 'Password must contain at least one letter'
+    }
+    if (!/\d/.test(password)) {
+      return 'Password must contain at least one number'
+    }
+    return ''
+  }
+
+  const validateDocumentNumber = (documentNumber) => {
+    if (!documentNumber || documentNumber.trim() === '') {
+      return 'Document number is required'
+    }
+    const cleaned = documentNumber.trim().replace(/\s/g, '')
+    
+    // Aadhaar: 12 digits
+    if (/^\d{12}$/.test(cleaned)) {
+      return ''
+    }
+    // PAN: 10 alphanumeric characters (e.g., ABCDE1234F)
+    if (/^[A-Z]{5}\d{4}[A-Z]{1}$/.test(cleaned.toUpperCase())) {
+      return ''
+    }
+    // License: Alphanumeric, typically 15-16 characters
+    if (/^[A-Z0-9]{10,20}$/i.test(cleaned)) {
+      return ''
+    }
+    // If none match, show generic error
+    return 'Please enter a valid document number (Aadhaar: 12 digits, PAN: 10 characters, License: 10-20 characters)'
+  }
+
+  // Handle field blur validation
+  const handleBlur = (e) => {
+    const fieldName = e.target.name
+    const fieldValue = e.target.value
+
+    let error = ''
+    switch (fieldName) {
+      case 'name':
+        error = validateName(fieldValue)
+        break
+      case 'email':
+        error = validateEmail(fieldValue)
+        break
+      case 'phone':
+        error = validatePhone(fieldValue)
+        break
+      case 'password':
+        error = validatePassword(fieldValue)
+        break
+      case 'documentNumber':
+        error = validateDocumentNumber(fieldValue)
+        break
+      default:
+        break
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error
+    }))
+  }
 
   const validateDocument = (file) => {
     if (!file) {
@@ -72,6 +187,7 @@ const Register = () => {
         if (validation.valid) {
           setFormData({ ...formData, document: file })
           setError('') // Clear general error when valid file is selected
+          setDocumentError('') // Clear document error
         } else {
           // Clear the file input if validation fails
           e.target.value = ''
@@ -79,30 +195,67 @@ const Register = () => {
         }
       }
     } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value })
+      const fieldName = e.target.name
+      const fieldValue = e.target.value
+      setFormData({ ...formData, [fieldName]: fieldValue })
+      
+      // Clear field error when user starts typing (only if error exists)
+      if (fieldErrors[fieldName]) {
+        setFieldErrors(prev => ({
+          ...prev,
+          [fieldName]: ''
+        }))
+      }
+    }
+  }
+
+  // Handle document file blur/change
+  const handleDocumentBlur = (e) => {
+    if (formData.document) {
+      const validation = validateDocument(formData.document)
+      if (!validation.valid) {
+        setDocumentError(validation.error)
+      }
+    } else {
+      setDocumentError('Please upload a government-issued document for verification')
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    setDocumentError('')
 
-    // Validate document before submission
+    // Validate all fields before submission
+    const nameError = validateName(formData.name)
+    const emailError = validateEmail(formData.email)
+    const phoneError = validatePhone(formData.phone)
+    const passwordError = validatePassword(formData.password)
+    const documentNumberError = validateDocumentNumber(formData.documentNumber)
+    
+    // Validate document
+    let docError = ''
     if (!formData.document) {
-      setError('Please upload a government-issued document for verification')
-      return
+      docError = 'Please upload a government-issued document for verification'
+    } else {
+      const validation = validateDocument(formData.document)
+      if (!validation.valid) {
+        docError = validation.error
+      }
     }
 
-    // Re-validate document on submit
-    const validation = validateDocument(formData.document)
-    if (!validation.valid) {
-      setError(validation.error)
-      return
-    }
+    // Set all field errors
+    setFieldErrors({
+      name: nameError,
+      email: emailError,
+      phone: phoneError,
+      password: passwordError,
+      documentNumber: documentNumberError
+    })
+    setDocumentError(docError)
 
-    if (!formData.documentNumber) {
-      setError('Please enter your document number (Aadhaar/PAN/License number)')
+    // If any validation fails, stop submission
+    if (nameError || emailError || phoneError || passwordError || documentNumberError || docError) {
+      setError('Please fix all errors before submitting')
       return
     }
 
@@ -194,8 +347,15 @@ const Register = () => {
                 className="form-input"
                 value={formData.name}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
+                style={{ borderColor: fieldErrors.name ? '#ff4444' : '' }}
               />
+              {fieldErrors.name && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {fieldErrors.name}
+                </small>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Email</label>
@@ -205,8 +365,15 @@ const Register = () => {
                 className="form-input"
                 value={formData.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
+                style={{ borderColor: fieldErrors.email ? '#ff4444' : '' }}
               />
+              {fieldErrors.email && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {fieldErrors.email}
+                </small>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Phone</label>
@@ -216,8 +383,16 @@ const Register = () => {
                 className="form-input"
                 value={formData.phone}
                 onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="10-digit phone number"
                 required
+                style={{ borderColor: fieldErrors.phone ? '#ff4444' : '' }}
               />
+              {fieldErrors.phone && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {fieldErrors.phone}
+                </small>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
@@ -227,9 +402,21 @@ const Register = () => {
                 className="form-input"
                 value={formData.password}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
                 minLength={6}
+                style={{ borderColor: fieldErrors.password ? '#ff4444' : '' }}
               />
+              {fieldErrors.password && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {fieldErrors.password}
+                </small>
+              )}
+              {!fieldErrors.password && formData.password && (
+                <small className="form-hint" style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+                  Password must be at least 6 characters with letters and numbers
+                </small>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">I am a</label>
@@ -252,22 +439,28 @@ const Register = () => {
                 className="form-input"
                 accept=".jpg,.jpeg,image/jpeg"
                 onChange={handleChange}
+                onBlur={handleDocumentBlur}
                 required
+                style={{ borderColor: documentError ? '#ff4444' : '' }}
               />
               {documentError && (
                 <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
                   {documentError}
                 </small>
               )}
-              <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
-                📄 Allowed format: JPEG only (JPG/JPEG)
-              </small>
-              <small className="form-hint" style={{ display: 'block' }}>
-                📏 Maximum file size: 5 MB
-              </small>
-              <small className="form-hint" style={{ display: 'block', marginTop: '4px' }}>
-                Upload a clear JPEG image of your government-issued ID (Aadhaar, PAN, License, or Passport)
-              </small>
+              {!documentError && (
+                <>
+                  <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
+                    📄 Allowed format: JPEG only (JPG/JPEG)
+                  </small>
+                  <small className="form-hint" style={{ display: 'block' }}>
+                    📏 Maximum file size: 5 MB
+                  </small>
+                  <small className="form-hint" style={{ display: 'block', marginTop: '4px' }}>
+                    Upload a clear JPEG image of your government-issued ID (Aadhaar, PAN, License, or Passport)
+                  </small>
+                </>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">
@@ -279,13 +472,21 @@ const Register = () => {
                 className="form-input"
                 value={formData.documentNumber}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 placeholder="Enter your Aadhaar/PAN/License number"
                 required
-                style={{ borderColor: !formData.documentNumber ? '#ff4444' : '' }}
+                style={{ borderColor: fieldErrors.documentNumber ? '#ff4444' : '' }}
               />
-              <small className="form-hint" style={{ color: !formData.documentNumber ? '#ff4444' : '#666' }}>
-                {!formData.documentNumber ? '⚠️ Document number is required' : 'Enter the number from your uploaded document'}
-              </small>
+              {fieldErrors.documentNumber && (
+                <small className="form-hint" style={{ color: '#ff4444', display: 'block', marginTop: '4px' }}>
+                  {fieldErrors.documentNumber}
+                </small>
+              )}
+              {!fieldErrors.documentNumber && (
+                <small className="form-hint" style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+                  Enter the number from your uploaded document (Aadhaar: 12 digits, PAN: 10 characters, License: 10-20 characters)
+                </small>
+              )}
             </div>
             <button type="submit" className="btn btn-primary w-full" disabled={loading}>
               {loading ? 'Registering...' : 'Register'}
