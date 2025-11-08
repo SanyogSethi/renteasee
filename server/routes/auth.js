@@ -35,14 +35,23 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const isPDF = fileExtension === '.pdf' || file.mimetype === 'application/pdf';
+    
+    // Reject PDF files explicitly
+    if (isPDF) {
+      return cb(new Error('PDF files are not allowed. Please upload only JPEG format.'));
+    }
+    
+    // Only allow JPEG/JPG
+    const allowedTypes = /jpeg|jpg/;
+    const extname = allowedTypes.test(fileExtension);
     const mimetype = allowedTypes.test(file.mimetype);
     
     if (extname && mimetype) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image and PDF files are allowed'));
+      cb(new Error('Only JPEG format is allowed. Please upload a JPEG image.'));
     }
   }
 });
@@ -70,9 +79,9 @@ router.post('/register', (req, res, next) => {
         });
       }
       // Handle fileFilter errors
-      if (err.message && err.message.includes('Only image and PDF')) {
+      if (err.message && (err.message.includes('PDF files are not allowed') || err.message.includes('Only JPEG'))) {
         return res.status(400).json({ 
-          message: 'Only image and PDF files are allowed. Allowed formats: JPEG, JPG, PNG, or PDF.' 
+          message: err.message 
         });
       }
       return res.status(400).json({ 

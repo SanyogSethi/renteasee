@@ -21,9 +21,9 @@ const Register = () => {
   const { register } = useAuth()
   const navigate = useNavigate()
 
-  // Allowed file formats and size
-  const ALLOWED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
-  const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf']
+  // Allowed file formats and size (JPEG only for document verification)
+  const ALLOWED_FORMATS = ['image/jpeg', 'image/jpg']
+  const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg']
   const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
 
   const validateDocument = (file) => {
@@ -32,13 +32,20 @@ const Register = () => {
       return { valid: true, error: '' }
     }
 
-    // Check file type
+    // Check file type - only JPEG allowed
     const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
     const isValidFormat = ALLOWED_FORMATS.includes(file.type) || 
                          ALLOWED_EXTENSIONS.includes(fileExtension)
 
     if (!isValidFormat) {
-      const errorMsg = `❌ Unsupported file format. Allowed formats: JPEG, JPG, PNG, or PDF`
+      // Check if PDF was uploaded
+      if (fileExtension === '.pdf' || file.type === 'application/pdf') {
+        const errorMsg = `❌ PDF files are not allowed. Please upload only JPEG format.`
+        setDocumentError(errorMsg)
+        return { valid: false, error: errorMsg }
+      }
+      // Other unsupported formats
+      const errorMsg = `❌ Unsupported file format. Please upload only JPEG format.`
       setDocumentError(errorMsg)
       return { valid: false, error: errorMsg }
     }
@@ -134,7 +141,7 @@ const Register = () => {
       let errorMessage = err.response?.data?.message || 'Registration failed'
       
       // Check for specific file-related errors
-      if (errorMessage.includes('Only image and PDF') || errorMessage.includes('file')) {
+      if (errorMessage.includes('Only JPEG') || errorMessage.includes('JPEG format') || errorMessage.includes('file')) {
         setError(`❌ Document Error: ${errorMessage}`)
       } else if (status === 400) {
         // Bad request - show the specific error message
@@ -243,7 +250,7 @@ const Register = () => {
                 type="file"
                 name="document"
                 className="form-input"
-                accept=".jpg,.jpeg,.png,.pdf"
+                accept=".jpg,.jpeg,image/jpeg"
                 onChange={handleChange}
                 required
               />
@@ -253,13 +260,13 @@ const Register = () => {
                 </small>
               )}
               <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
-                📄 Allowed formats: JPEG, JPG, PNG, or PDF
+                📄 Allowed format: JPEG only (JPG/JPEG)
               </small>
               <small className="form-hint" style={{ display: 'block' }}>
                 📏 Maximum file size: 5 MB
               </small>
               <small className="form-hint" style={{ display: 'block', marginTop: '4px' }}>
-                Upload a clear image or PDF of your government-issued ID (Aadhaar, PAN, License, or Passport)
+                Upload a clear JPEG image of your government-issued ID (Aadhaar, PAN, License, or Passport)
               </small>
             </div>
             <div className="form-group">
